@@ -29,6 +29,7 @@ interface Props {
     readerContainerNavigate?: any
     readerContainerNavigateArrow?: any
   }
+  defaultScale?: number
 }
 
 interface State {
@@ -49,7 +50,7 @@ class Reader extends React.Component<Props, State> {
     currentPage: 1,
     ready: true,
     pageLoaded: false,
-    scale: 1,
+    scale: this.props.defaultScale || 1,
     error: undefined,
   }
 
@@ -254,5 +255,10 @@ const file = tagData.getAttribute('data-file')
 const customStyle = window.CUSTOM_STYLE
 // @ts-ignore
 const withScroll = window.WITH_SCROLL
+// @ts-ignore
+const defaultScale = window.DEFAULT_SCALE
 
-render(<Reader {...{ file, customStyle, withScroll }} />, ReactContainer)
+render(
+  <Reader {...{ file, customStyle, withScroll, defaultScale }} />,
+  ReactContainer,
+)

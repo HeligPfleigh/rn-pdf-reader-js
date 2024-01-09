@@ -24,7 +24,7 @@ export type RenderType =
   | 'BASE64_TO_LOCAL_PDF'
   | 'URL_TO_BASE64'
   | 'GOOGLE_READER'
-  | 'GOOGLE_DRIVE_VIEWER';
+  | 'GOOGLE_DRIVE_VIEWER'
 
 export interface CustomStyle {
   readerContainer?: CSS.Properties<any>
@@ -55,6 +55,7 @@ export interface Props {
   withScroll?: boolean
   withPinchZoom?: boolean
   maximumPinchZoomScale?: number
+  defaultScale?: number
   onLoad?(event: WebViewNavigationEvent): void
   onLoadEnd?(event: WebViewNavigationEvent | WebViewErrorEvent): void
   onError?(event: WebViewErrorEvent | WebViewHttpErrorEvent | string): void
@@ -74,6 +75,7 @@ function viewerHtml(
   withScroll: boolean = false,
   withPinchZoom: boolean = false,
   maximumPinchZoomScale: number = 5,
+  defaultScale: number = 1,
 ): string {
   return `
 <!DOCTYPE html>
@@ -111,6 +113,11 @@ function viewerHtml(
       } catch (error) {
         window.WITH_SCROLL = {}
       }
+      try {
+        window.DEFAULT_SCALE = JSON.parse('${JSON.stringify(defaultScale)}');
+      } catch (error) {
+        window.DEFAULT_SCALE = {}
+      }
     </script>
   </head>
   <body>
@@ -133,6 +140,7 @@ async function writeWebViewReaderFileAsync(
   withScroll?: boolean,
   withPinchZoom?: boolean,
   maximumPinchZoomScale?: number,
+  defaultScale?: number,
 ): Promise<void> {
   const { exists, md5 } = await getInfoAsync(bundleJsPath, { md5: true })
   const bundleContainer = require('./bundleContainer')
@@ -147,6 +155,7 @@ async function writeWebViewReaderFileAsync(
       withScroll,
       withPinchZoom,
       maximumPinchZoomScale,
+      defaultScale,
     ),
   )
 }
@@ -295,13 +304,14 @@ class PdfReader extends React.Component<Props, State> {
         withScroll,
         withPinchZoom,
         maximumPinchZoomScale,
+        defaultScale,
       } = this.props
       const { renderType } = this.state
       switch (renderType!) {
         case 'GOOGLE_DRIVE_VIEWER': {
-          break;
+          break
         }
-        
+
         case 'URL_TO_BASE64': {
           const data = await fetchPdfAsync(source)
           await writeWebViewReaderFileAsync(
@@ -310,6 +320,7 @@ class PdfReader extends React.Component<Props, State> {
             withScroll,
             withPinchZoom,
             maximumPinchZoomScale,
+            defaultScale,
           )
           break
         }
@@ -321,6 +332,7 @@ class PdfReader extends React.Component<Props, State> {
             withScroll,
             withPinchZoom,
             maximumPinchZoomScale,
+            defaultScale,
           )
           break
         }
@@ -353,7 +365,7 @@ class PdfReader extends React.Component<Props, State> {
     }
 
     if (useGoogleDriveViewer) {
-      return 'GOOGLE_DRIVE_VIEWER';
+      return 'GOOGLE_DRIVE_VIEWER'
     }
 
     if (Platform.OS === 'ios') {
@@ -386,7 +398,7 @@ class PdfReader extends React.Component<Props, State> {
       case 'GOOGLE_READER':
         return { uri: getGoogleReaderUrl(uri!) }
       case 'GOOGLE_DRIVE_VIEWER':
-        return { uri: getGoogleDriveUrl(uri) };
+        return { uri: getGoogleDriveUrl(uri || '') }
       case 'DIRECT_BASE64':
       case 'URL_TO_BASE64':
         return { uri: htmlPath }
@@ -475,7 +487,10 @@ class PdfReader extends React.Component<Props, State> {
               onError,
               onHttpError: onError,
               style,
-              source: renderedOnce || !isAndroid ? source : undefined,
+              source:
+                renderedOnce || !isAndroid
+                  ? source
+                  : ({ uri: undefined } as any),
             }}
             allowFileAccess={isAndroid}
             allowFileAccessFromFileURLs={isAndroid}
